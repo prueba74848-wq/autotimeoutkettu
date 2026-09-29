@@ -1,1 +1,6 @@
-
+{
+  "name": "AutoTimeout",
+  "description": "Times listed users out every time they send a message, for a fixed or random duration, in any server where you can moderate (requires Moderate Members).",
+  "authors": [{ "name": "test", "id": "877502759404974110" }],
+  "main": "index.js"
+}
