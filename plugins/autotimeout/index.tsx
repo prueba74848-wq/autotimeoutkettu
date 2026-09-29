@@ -11,8 +11,8 @@ import { resolveGuildId } from "../../lib/channels";
 // Times a listed user out every time they send a message.
 //
 // This does not chain into a permanent mute: while timed out they cannot post,
-// so nothing re-triggers until the timeout lapses and they speak again. There
-// is deliberately no expiry re-apply and no reaction to a moderator lifting it.
+// so nothing re-triggers until the timeout lapses (or a moderator lifts it) and
+// they speak again. There is deliberately no expiry re-apply.
 //
 // A rule names a user only. It fires in whichever server the message was sent
 // in, provided we hold Moderate Members there and it isn't switched off in the
@@ -28,9 +28,13 @@ let perms: ReturnType<typeof createPermissions> | null = null;
 let guilds: ReturnType<typeof createGuilds> | null = null;
 let unsubscribe: (() => void) | null = null;
 
-// When we believe each (guild, user) is muted until. A burst of messages sent
-// before Discord applies the first timeout would otherwise fire one PATCH each
-// and keep extending the mute past the configured duration.
+// Short in-flight guard per (guild, user). A burst of messages sent before
+// Discord applies the first timeout would otherwise fire one PATCH each and
+// keep extending the mute past the configured duration. It deliberately does
+// NOT last for the whole timeout: a timed-out user cannot post, so any message
+// that arrives after this window means the timeout is no longer active
+// (expired, or lifted early by a moderator) and they should be timed out again.
+const GUARD_MS = 5000;
 let mutedUntil: Record<string, number> = {};
 
 function toast(msg: string) {
@@ -88,10 +92,10 @@ function onMessage(payload: any) {
 
     const key = timerKey(guildId, userId);
     const now = Date.now();
-    if (mutedUntil[key] && mutedUntil[key] > now) return; // already muted
+    if (mutedUntil[key] && mutedUntil[key] > now) return; // PATCH just sent, still applying
 
     const ms = rollDuration(rule);
-    mutedUntil[key] = now + ms;
+    mutedUntil[key] = now + GUARD_MS;
     rest.timeoutMember(guildId, userId, untilISO(now, ms));
   } catch (e) { /* never let one event break the listener */ }
 }

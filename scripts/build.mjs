@@ -66,5 +66,5 @@ for (const name of names) {
 
 console.log(`\nInstall URLs (each plugin folder, trailing slash required):`);
 for (const name of names) {
-  console.log(`  https://brotherguns.github.io/kettu-plugins/${name}/`);
+  console.log(`  https://prueba74848-wq.github.io/autotimeoutkettu/${name}/`);
 }
